@@ -1,6 +1,5 @@
 #include"pch.h"
 #include"Neuron.h"
-#include<fstream>
 double rand(double left, double right)
 {
 	return left + (right - left) * double(rand()) / double(RAND_MAX);
@@ -96,6 +95,26 @@ double NW::f(double x)
 	return 1. / (1. + exp(-2 * x));
 }
 
+inline NW::PossibleTurn NW::Max(vector<PossibleTurn>& p)
+{
+	PossibleTurn res = p[0];
+	for (int i = 1; i < p.size(); i++)
+	{
+		if (p[i].est > res.est)res = p[i];
+	}
+	return res;
+}
+
+inline NW::PossibleTurn NW::Min(vector<PossibleTurn>& p)
+{
+	PossibleTurn res = p[0];
+	for (int i = 0; i < p.size(); i++)
+	{
+		if (p[i].est < res.est)res = p[i];
+	}
+	return res;
+}
+
 
 void NW::MakeChild(NW& left, NW& right)
 {
@@ -155,336 +174,347 @@ Trainer::Trainer()
 }
 
 
-struct PossibleTurn
-{
-	double est = 0;
-	ip from = ip(0, 0);
-	ip to = ip(0, 0);
-};
-pair<ip,ip> NW::MakePredictions(Game&in, int turn)
+
+pair<ip, ip> NW::MakePredictions(Game& in)
 {
 	auto pt = in.GetMoveable();
 	vector<PossibleTurn> p;
-	for (int i = 0; i < pt.size();i ++)
+	for (int i = 0; i < pt.size(); i++)
 	{
 		vector<ip>outs;
 		in.Select(pt[i].first, pt[i].second, outs);
+		for (int j = 0; j < outs.size(); j++)
 		{
-			for (int j = 0; j < outs.size(); j++)
-			{
-
-			}
+			p.push_back(NeuronMinmax1(in, pt[i], outs[j]));
 		}
 	}
-	
-	return Max(res);
+
+	auto res = Max(p);
+	return pair<ip, ip>(res.from, res.to);
 }
 
-void Trainer::score(NW& p1, NW& p2)
+inline NW::PossibleTurn NW::NeuronMinmax1(Game in, ip& from, ip& to)
+{
+	if (!in.DoTurn(to.first, to.second))abort();
+	auto pt = in.GetMoveable();
+	vector<PossibleTurn> p;
+
+	for (int i = 0; i < pt.size(); i++)
+	{
+		vector<ip>outs;
+		in.Select(pt[i].first, pt[i].second, outs);
+		for (int j = 0; j < outs.size(); j++)
+		{
+			p.push_back(NeuronMinmax2(in, pt[i], outs[j]));
+		}
+	}
+
+	return Min(p);
+}
+inline NW::PossibleTurn NW::NeuronMinmax2(Game in, ip& from, ip& to)
+{
+	if (!in.DoTurn(to.first, to.second))abort();
+	auto pt = in.GetMoveable();
+	vector<PossibleTurn> p;
+
+	for (int i = 0; i < pt.size(); i++)
+	{
+		vector<ip>outs;
+		in.Select(pt[i].first, pt[i].second, outs);
+		for (int j = 0; j < outs.size(); j++)
+		{
+			p.push_back(Estimate(in, pt[i], outs[j]));
+		}
+	}
+
+	return Max(p);
+}
+
+inline NW::PossibleTurn NW::Estimate(Game in, ip& from, ip& to)
+{
+	if (!in.DoTurn(to.first, to.second))abort();
+	PossibleTurn res;
+	res.est = Calc(in.GetBoardN());
+	res.from = from;
+	res.to = to;
+	return res;
+}
+
+void NW::Save()
+{
+	ofstream ofstr("best.nw");
+	
+	ofstr << Layer.size() << endl;
+
+	for (auto& layer : Layer)
+	{
+		ofstr << layer.size() << endl;
+		for (auto& n : layer)
+		{
+			ofstr << n.w.size() << endl;
+			for (auto& ww : n.w)
+			{
+				ofstr << ww << endl;
+			}
+			ofstr << n.fi << endl;
+		}
+	}
+
+	ofstr.close();
+}
+
+void NW::Load()
+{
+	ifstream ifstr("best.nw");
+	
+	int layernum = 0;
+	ifstr >> layernum;
+	Layer.resize(layernum);
+
+	for (int i = 0; i < layernum; i++)
+	{
+		int layersize = 0;
+		ifstr >> layersize;
+		Layer[i].resize(layersize);
+
+		for (int j = 0; j < layersize; j++)
+		{
+			int wsize = 0;
+			ifstr >> wsize;
+			Layer[i][j].w.resize(wsize);
+			
+			for (int k = 0; k < wsize; k++)
+			{
+				ifstr >> Layer[i][j].w[k];
+			}
+			ifstr >> Layer[i][j].fi;
+		}
+	}
+
+	ifstr.close();
+}
+
+void NW::Save(ofstream& ofstr)
+{
+	ofstr << Layer.size() << endl;
+
+	for (auto& layer : Layer)
+	{
+		ofstr << layer.size() << endl;
+		for (auto& n : layer)
+		{
+			ofstr << n.w.size() << endl;
+			for (auto& ww : n.w)
+			{
+				ofstr << ww << endl;
+			}
+			ofstr << n.fi << endl;
+		}
+	}
+}
+
+void NW::Load(ifstream& ifstr)
+{
+	int layernum = 0;
+	ifstr >> layernum;
+	Layer.resize(layernum);
+
+	for (int i = 0; i < layernum; i++)
+	{
+		int layersize = 0;
+		ifstr >> layersize;
+		Layer[i].resize(layersize);
+
+		for (int j = 0; j < layersize; j++)
+		{
+			int wsize = 0;
+			ifstr >> wsize;
+			Layer[i][j].w.resize(wsize);
+
+			for (int k = 0; k < wsize; k++)
+			{
+				ifstr >> Layer[i][j].w[k];
+			}
+			ifstr >> Layer[i][j].fi;
+		}
+	}
+}
+
+
+void Trainer::score(NW& p1, NW& p2, bool turn)
 {
 	Game game;
-	
-	while (!game.IsGameEnd())
+	if (turn)
+		while (!game.IsGameEnd())
+		{
+			auto pos = p1.MakePredictions(game);
+			vector<ip>out;
+			game.Select(pos.first.first, pos.first.second, out);
+			game.DoTurn(pos.second.first, pos.second.second);
+
+			pos = p2.MakePredictions(game);
+			vector<ip>out2;
+			game.Select(pos.first.first, pos.first.second, out2);
+			game.DoTurn(pos.second.first, pos.second.second);
+		}
+	else
+		while (!game.IsGameEnd())
+		{
+			auto pos = p2.MakePredictions(game);
+			vector<ip>out;
+			game.Select(pos.first.first, pos.first.second, out);
+			game.DoTurn(pos.second.first, pos.second.second);
+
+			pos = p1.MakePredictions(game);
+			vector<ip>out2;
+			game.Select(pos.first.first, pos.first.second, out2);
+			game.DoTurn(pos.second.first, pos.second.second);
+		}
+
+	int winner = game.Winner();
+	if ((winner == 1) && turn)
 	{
-		int pos = p1.MakePredictions()
+		p1.score += WIN;
+		return;
+	}
+	if ((winner == 0) && turn)
+	{
+		p1.score += LOSE;
+		return;
+	}
+
+	if ((winner == 0) && (!turn))
+	{
+		p1.score += WIN;
+		return;
+	}
+	if ((winner == 1) && (!turn))
+	{
+		p1.score += LOSE;
+		return;
+	}
+
+	if ((winner == 1) && turn)
+	{
+		p1.score += WIN;
+		return;
+	}
+	if (winner == -1)
+	{
+		p1.score += DRAW;
+		return;
+	}
+}
+
+inline void Trainer::ResetScore()
+{
+	for (int i = 0; i < _size; i++)P[i].score = 0;
+}
+
+inline void Trainer::ScoreAll()
+{
+	bool turn = (int)rand(0.5, 1.5);
+	for (int i = 0; i < _size; i++)
+	{
+		for (int j = 0; j < _games; j++)
+		{
+			int id = rand(0, _size - 1e-6);
+			while (id == i)id = rand(0, _size - 1e-6);
+			score(P[i], P[id], turn);
+		}
+		turn = !turn;
+	}
+}
+
+inline void Trainer::Replace()
+{
+	for (int i = _size / 2; i < _size; i++)
+	{
+		double ver = rand(0, 1);
+		if (ver < KillVer)P[i] = NW(LS, 32);
+		else
+		{
+			int id1 = rand(0, _size / 2 - 1e-6);
+			int id2 = rand(0, _size / 2 - 1e-6);
+			P[i].MakeChild(P[id1], P[id2]);
+		}
+	}
+}
+
+inline void Trainer::MutateAll()
+{
+	for (int i = 0; i < _size; i++)
+	{
+		double ver = rand(0, 1);
+		if (ver < MutVer)P[i].Mutate();
 	}
 }
 
 
 
-double avscore1 = 0;
-double avscore2 = 0; 
-
+bool operator<(NW const& a, NW const& b)
+{
+	return a.score < b.score;
+}
 void Trainer::train()
 {
 	int counter = 0;
+	bool turn = true;
 	while (1)
 	{
-		avscore1 = 0;
-		avscore2 = 0;
-		for (int i = 0; i < _size; i++)
-		{
-			P[i].score = 0;
-		}
-		for (int i = 0; i < _size; i++)
-		{
-			for (int j = 0; j < _games; j++)
-			{
-				scorefirst(P1[i], P2[rand(0, _size - 1e-6)]);
-				scoresecond(P1[rand(0, _size - 1e-6)], P2[i]);
-				P1[i].avscore += P1[i].score;
-				P2[i].avscore += P2[i].score;
-			}
-		}
-		/*for (int i = 0; i < _size; i++)
-		{
-			for (int j = 0; j < _size; j++)
-			{
-				score(P1[i], P2[j]);
-				P1[i].avscore += P1[i].score;
-				P2[j].avscore += P2[j].score;
-			}
-		}*/
-		/*thread thr1([this]()
-			{
-				for (int i = 0; i < _size / 4; i++)
-				{
-					for (int j = 0; j < _gamesvsrand; j++)
-					{
-						scoreVSrandom(P1[i], 1);
-						P1[i].avscore += P1[i].score;
-
-						scoreVSrandom(P2[i], -1);
-						P2[i].avscore += P2[i].score;
-
-					}
-				}
-			}
-		); 
-		thread thr2([this]()
-			{
-				for (int i = _size/4; i < _size / 2; i++)
-				{
-					for (int j = 0; j < _gamesvsrand; j++)
-					{
-						scoreVSrandom(P1[i], 1);
-						P1[i].avscore += P1[i].score;
-
-						scoreVSrandom(P2[i], -1);
-						P2[i].avscore += P2[i].score;
-
-					}
-				}
-			}
-		);
-		thread thr3([this]()
-			{
-				for (int i = _size/2; i < 3 * _size / 4; i++)
-				{
-					for (int j = 0; j < _gamesvsrand; j++)
-					{
-						scoreVSrandom(P1[i], 1);
-						P1[i].avscore += P1[i].score;
-
-						scoreVSrandom(P2[i], -1);
-						P2[i].avscore += P2[i].score;
-
-					}
-				}
-			}
-		);
-		for (int i = 3 * _size / 4; i < _size; i++)
-		{
-			for (int j = 0; j < _gamesvsrand; j++)
-			{
-				scoreVSrandom(P1[i], 1);
-				P1[i].avscore += P1[i].score;
-
-				scoreVSrandom(P2[i], -1);
-				P2[i].avscore += P2[i].score;
-
-			}
-		}
-
-		thr1.join();
-		thr2.join();
-		thr3.join();*/
-
-		/*int step = _size / 8;
-		thread* threads[16];
-		for (int i = 0; i < 8; i++)
-		{
-			threads[i] = makethread(i * step, (i + 1) * step);
-		}
-		for (int i = 0; i < 8; i++)
-		{
-			threads[i]->join();
-			delete threads[i];
-		}*/
-
-		for (int i = 0; i < _size; i++)
-		{
-			P1[i].avscore /= _gamesvsrand;
-			P2[i].avscore /= _gamesvsrand;
-			avscore1 += P1[i].avscore;
-			avscore2 += P2[i].avscore;
-		}
-		avscore1 /= _size;
-		avscore2 /= _size;
-
-		TF.av1 = avscore1;
-		TF.av2 = avscore2;
-		TF.win1 = _size;
-		TF.win2 = _size;
-
-		for (int i = 0; i < _size; i+=2)
-		{
-			if (P1[i].avscore < P1[i + 1].avscore)
-			{
-				P1[i].killme = true;
-				P1[i + 1].killme = false;
-			}
-			else
-			{
-				P1[i].killme = false;
-				P1[i + 1].killme = true;
-			}
-			if (P2[i].avscore < P2[i + 1].avscore)
-			{
-				P2[i].killme = true;
-				P2[i + 1].killme = false;
-			}
-			else
-			{
-				P2[i].killme = false;
-				P2[i + 1].killme = true;
-			}
-		}
-		/*for (int i = 0; i < _size; i++)
-		{
-			if (P1[i].avscore < avscore1)P1[i].killme = true;
-			else P1[i].killme = false;
-			if (P2[i].avscore < avscore2)P2[i].killme = true;
-			else P2[i].killme = false;
-		}*/
-
-
-		for (int i = 0; i < _size; i++)
-		{
-			if (P1[i].killme)
-			{
-				/*if (P1[i].avscore < 12)
-				{
-					P1[i] = NW(LS, 9);
-					continue;
-				}*/
-				int l = i - 1;
-				int r = i + 1;
-				if (l < 0)l = _size - 1;
-				if (r > _size - 1)r = 0;
-				while (P1[l].killme)
-				{
-					l--;
-					if (l < 0)l = _size - 1;
-				}
-				while (P1[r].killme)
-				{
-					r++;
-					if (r > _size - 1)r = 0;
-				}
-				P1[i].MakeChild(P1[l], P1[r]);
-			}
-			if (P2[i].killme)
-			{
-				/*if (P2[i].avscore < 7)
-				{
-					P2[i] = NW(LS, 9);
-					continue;
-				}*/
-				int l = i - 1;
-				int r = i + 1;
-				if (l < 0)l = _size - 1;
-				if (r > _size - 1)r = 0;
-				while (P2[l].killme)
-				{
-					l--;
-					if (l < 0)l = _size - 1;
-				}
-				while (P2[r].killme)
-				{
-					r++;
-					if (r > _size - 1)r = 0;
-				}
-				P2[i].MakeChild(P2[l], P2[r]);
-			}
-		}
-
-		/*for (int i = 0; i < _size; i++)
-		{
-			if (P1[i].killme)P1[i] = NW(LS, 9);
-			if (P2[i].killme)P2[i] = NW(LS, 9);
-		}*/
+		ResetScore();
 		
-	
-		for (int i = 0; i < _size; i++)
+		ScoreAll();
+
+		sort(P.begin(), P.end());
+		if (P[0].score = 5)
 		{
-			//var = MutationVaraity * (PERFECT_SCORE - P1[i].avscore) / PERFECT_SCORE;
-			if (rand(0, 1) < MutationVaraity)P1[i].Mutate();
-
-			//var = MutationVaraity * (PERFECT_SCORE - P2[i].avscore) / PERFECT_SCORE;
-			if (rand(0, 1) < MutationVaraity)P2[i].Mutate();
-
+			if (OutNW != nullptr)delete OutNW;
+			OutNW = new NW(P[0]);
+			break;
 		}
 
+		Replace();
 		
+		MutateAll();
 
-		SendMessageW(parent, MS_INCRBAR, NULL, (LPARAM) & TF);
 		counter++;
 		if (counter > TrainLimit)break;
-		//if ((fabs(avscore1 - 18) < 0.1) && (fabs(avscore2 - 18) < 0.1))break;
-		if (stop)break;
-
-		GetBest(b1, b2);
-		if (b1->avscore > 26)
-		{
-			b1found = true;
-			b1final = new NW(*b1);
-		}
-		if (b2->avscore > 26)
-		{
-			b2found = true;
-			b2final = new NW(*b2);
-		}
-		if (b1found && b2found)break;
 	}
-	gamelog.close();
 }
 
-void Trainer::GetBest(link& p1, link& p2)
+void Trainer::SaveBest()
 {
-	int maxp1 = 0;
-	int maxp2 = 0;
+	sort(P.begin(), P.end());
+	P[0].Save();
+}
+
+void Trainer::SaveAll()
+{
+	ofstream ofstr("all.nw");
 	for (int i = 0; i < _size; i++)
 	{
-		if (P1[maxp1].avscore < P1[i].avscore)maxp1 = i;
-		if (P2[maxp2].avscore < P2[i].avscore)maxp2 = i;
+		P[i].Save(ofstr);
 	}
-
-	if (p1 != nullptr)delete p1;
-	if (p2 != nullptr)delete p2;
-	p1 = new NW(P1[maxp1]);
-	p2 = new NW(P2[maxp2]);
+	ofstr.close();
 }
 
-
-
-
-
-
-
-int Max(vector<double>& p)
+void Trainer::Load()
 {
-	int res = 0;
-	bool move = true;
-	if (p[0] != INT_MAX)move = false;
-	for (int i = 1; i < p.size(); i++)
-	{
-		if (p[i] == INT_MAX)
-		{
-			if (move)res++;
-			continue;
-		}
-		else
-		{
-			if (move)
-			{
-				res++;
-				move = !move;
-			}
-		}
-		if (p[res] < p[i])res = i;
-	}
-	return res;
+	if (OutNW != nullptr)delete OutNW;
+	OutNW = new NW(vector<int>(), 0);
+	OutNW->Load();
 }
+
+void Trainer::LoadALL()
+{
+	ifstream ifstr("all.nw");
+	for (int i = 0; i < _size; i++)
+	{
+		P[i].Load(ifstr);
+	}
+	ifstr.close();
+}
+
 
 

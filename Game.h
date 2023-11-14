@@ -47,5 +47,6 @@ public:
 	bool DoTurnUnchecked(int i, int j);
 
 	bool IsGameEnd();
+	// 1 - белые, 0 - черные, -1 ничья
 	int Winner();
 };
