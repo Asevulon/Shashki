@@ -24,6 +24,7 @@
 #define MS_GAMECLICK	WM_USER + 1
 #define MS_GAMEEND		WM_USER + 2
 #define MS_RESTART		WM_USER + 3
-
+#define MS_BOTTURN		WM_USER + 4
+#define MS_FILLBOT		WM_USER + 5
 
 

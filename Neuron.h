@@ -74,6 +74,8 @@ private:
 	const double MutVer = 0.5;
 
 	vector<int>LS = { 40,10, 1};
+
+	bool ForcedToTrain = false;
 protected:
 	inline void score(NW& target, NW& opponent, bool turn);
 	inline void ResetScore();
@@ -82,6 +84,7 @@ protected:
 	inline void MutateAll();
 public:
 	int TrainLimit = 100000;
+	
 	Trainer();
 	void train();
 	bool stop = false;
@@ -91,9 +94,13 @@ public:
 	void SaveBest();
 	void SaveAll();
 
+	void ForceToTrain(int val);
 	void Load();
 	void LoadALL();
-
+	void FillOut();
 	int BestScore = 0;
+	int GamesCount = 0;
+	int GenerationCount = 0;
+	int scores[30];
 };
 

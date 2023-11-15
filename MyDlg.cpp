@@ -29,6 +29,7 @@ void MyDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_COMBO_GAME_MODE, CBGameMode);
 	DDX_Control(pDX, IDOK, OkCtr);
 	DDX_Control(pDX, IDC_BESTSCORE, BSctr);
+	DDX_Control(pDX, IDC_BESTSCORE2, ScoresList);
 }
 
 BEGIN_MESSAGE_MAP(MyDlg, CDialogEx)
@@ -41,6 +42,8 @@ BEGIN_MESSAGE_MAP(MyDlg, CDialogEx)
 	ON_COMMAND(ID_32776, &MyDlg::OnSaveAll)
 	ON_COMMAND(ID_32777, &MyDlg::OnLoadAll)
 	ON_WM_TIMER()
+	ON_MESSAGE(MS_FILLBOT, &MyDlg::OnMsFillBot)
+	ON_COMMAND(ID_FORCED_TRAIN, &MyDlg::OnForcedTrain)
 END_MESSAGE_MAP()
 
 
@@ -57,6 +60,8 @@ BOOL MyDlg::OnInitDialog()
 
 	// TODO: добавьте дополнительную инициализацию
 	CBGameMode.InsertString(-1, L"2 игрока");
+	CBGameMode.InsertString(-1, L"Игрок против нейросети");
+	CBGameMode.InsertString(-1, L"Нейросеть против игрока");
 	CBGameMode.SetCurSel(0);
 	return TRUE;  // возврат значения TRUE, если фокус не передан элементу управления
 }
@@ -97,16 +102,47 @@ HCURSOR MyDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+LRESULT MyDlg::OnMsFillBot(WPARAM wParam, LPARAM lParam)
+{
+	trainer.FillOut();
+	return LRESULT();
+}
+
 
 
 void MyDlg::OnBnClickedOk()
 {
 	// TODO: добавьте свой код обработчика уведомлений
+	int id = CBGameMode.GetCurSel();
+	if (id == -1)return;
+
+	CString str;
+	CBGameMode.GetLBText(id, str);
+
 	GameDlg dlg;
+	if (str == L"2 игрока")
+	{
+		dlg.gm = pvp;
+	}
+	else
+		if (str == L"Игрок против нейросети")
+		{
+			dlg.gm = pvn;
+		}
+		else
+			if (str == L"Нейросеть против игрока")
+			{
+				dlg.gm = nvp;
+			}
+	dlg.name = str;
+
 	CRect rect;
 	SystemParametersInfo(SPI_GETWORKAREA, 0, &rect, 0);
 	dlg.posx = rect.Width() / 2. - 450;
 	dlg.posy = 100;
+	dlg.bot = trainer.OutNW;
+	
+
 	dlg.DoModal();
 }
 
@@ -119,11 +155,13 @@ void MyDlg::On32771()
 
 DWORD WINAPI TrainingThreadFunc(LPVOID p)
 {
+	srand(time(NULL));
 	MyDlg* dlg = (MyDlg*)p;
 	dlg->OkCtr.EnableWindow(FALSE);
 	dlg->trainer.train();
 	dlg->KillTimer(dlg->timerid);
-	dlg->OkCtr.EnableWindow(FALSE);
+	dlg->OkCtr.EnableWindow(TRUE);
+	dlg->SendMessage(MS_FILLBOT);
 	return 0;
 }
 //обучение
@@ -135,7 +173,7 @@ void MyDlg::On32773()
 	KillTimer(timerid);
 
 	TrainingThread = CreateThread(NULL, NULL, TrainingThreadFunc, this, NULL, NULL);
-	timerid = SetTimer(123, 250, NULL);
+	timerid = SetTimer(123, 25, NULL);
 }
 
 
@@ -163,8 +201,46 @@ void MyDlg::OnLoadAll()
 void MyDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: добавьте свой код обработчика сообщений или вызов стандартного
-	CString str;
-	str.Format(L"Лучший счет: %d", trainer.BestScore);
+	CString str, str2;
+	str.Format(L"Лучший счет: %d\r\nИгр сыграно: %d\r\nПоколение: %d", trainer.BestScore, trainer.GamesCount, trainer.GenerationCount);
 	BSctr.SetWindowTextW(str);
+
+	str.Format(L"");
+	for (int i = 0; i < 10; i++)
+	{
+		str2.Format(L"%d, ", trainer.scores[i]);
+		str += str2;
+	}
+	str += L"\r\n";
+	for (int i = 10; i < 20; i++)
+	{
+		str2.Format(L"%d, ", trainer.scores[i]);
+		str += str2;
+	}
+	str += L"\r\n";
+	for (int i = 20; i < 29; i++)
+	{
+		str2.Format(L"%d, ", trainer.scores[i]);
+		str += str2;
+	}
+	str2.Format(L"%d ", trainer.scores[29]);
+	str += str2;
+	ScoresList.SetWindowTextW(str);
 	CDialogEx::OnTimer(nIDEvent);
+}
+
+
+void MyDlg::OnForcedTrain()
+{
+	// TODO: добавьте свой код обработчика команд
+	if (ftd.DoModal() != IDOK)return;
+
+	TerminateThread(TrainingThread, 0);
+	CloseHandle(TrainingThread);
+	KillTimer(timerid);
+
+	trainer.ForceToTrain(ftd.n);
+
+	TrainingThread = CreateThread(NULL, NULL, TrainingThreadFunc, this, NULL, NULL);
+	timerid = SetTimer(123, 25, NULL);
 }

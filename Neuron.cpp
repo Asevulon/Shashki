@@ -19,6 +19,7 @@ neuron::neuron(int size)
 NW& NW::operator =(const NW& nw)
 {
 	Layer = nw.Layer;
+	score = nw.score;
 	return *this;
 }
 
@@ -221,7 +222,10 @@ inline NW::PossibleTurn NW::NeuronMinmax1(Game in, ip& from, ip& to)
 		}
 	}
 
-	return Min(p);
+	auto m = Min(p);
+	m.from = from;
+	m.to = to;
+	return m;
 }
 inline NW::PossibleTurn NW::NeuronMinmax2(Game in, ip& from, ip& to)
 {
@@ -232,7 +236,7 @@ inline NW::PossibleTurn NW::NeuronMinmax2(Game in, ip& from, ip& to)
 		PossibleTurn res;
 		res.from = from;
 		res.to = to;
-		res.est = INT_MIN;
+		res.est = INT_MAX;
 		return res;
 	}
 	vector<PossibleTurn> p;
@@ -247,7 +251,10 @@ inline NW::PossibleTurn NW::NeuronMinmax2(Game in, ip& from, ip& to)
 		}
 	}
 
-	return Max(p);
+	auto m = Max(p);
+	m.from = from;
+	m.to = to;
+	return m;
 }
 
 inline NW::PossibleTurn NW::Estimate(Game in, ip& from, ip& to)
@@ -372,14 +379,14 @@ void Trainer::score(NW& p1, NW& p2, bool turn)
 
 			vector<ip>out;
 			game.Select(pos.first.first, pos.first.second, out);
-			game.DoTurn(pos.second.first, pos.second.second);
+			if (!game.DoTurn(pos.second.first, pos.second.second)) abort();
 
 			pos = p2.MakePredictions(game);
 			if (game.IsGameEnd())break;
 
 			vector<ip>out2;
 			game.Select(pos.first.first, pos.first.second, out2);
-			game.DoTurn(pos.second.first, pos.second.second);
+			if (!game.DoTurn(pos.second.first, pos.second.second)) abort();
 		}
 	else
 		while (!game.IsGameEnd())
@@ -389,16 +396,17 @@ void Trainer::score(NW& p1, NW& p2, bool turn)
 
 			vector<ip>out;
 			game.Select(pos.first.first, pos.first.second, out);
-			game.DoTurn(pos.second.first, pos.second.second);
+			if(!game.DoTurn(pos.second.first, pos.second.second)) abort();
 
 			pos = p1.MakePredictions(game);
 			if (game.IsGameEnd())break;
 
 			vector<ip>out2;
 			game.Select(pos.first.first, pos.first.second, out2);
-			game.DoTurn(pos.second.first, pos.second.second);
+			if (!game.DoTurn(pos.second.first, pos.second.second)) abort();
 		}
 
+	GamesCount++;
 	int winner = game.Winner();
 	if ((winner == 1) && turn)
 	{
@@ -436,14 +444,18 @@ void Trainer::score(NW& p1, NW& p2, bool turn)
 
 inline void Trainer::ResetScore()
 {
-	for (int i = 0; i < _size; i++)P[i].score = 0;
+	for (int i = 0; i < _size; i++)
+	{
+		P[i].score = 0;
+	}
 }
 
 inline void Trainer::ScoreAll()
 {
-	bool turn = (int)rand(0.5, 1.5);
 	for (int i = 0; i < _size; i++)
 	{
+		bool turn = (int)rand(0.5, 1.5);
+
 		for (int j = 0; j < _games; j++)
 		{
 			int id = rand(0, _size - 1e-6);
@@ -479,37 +491,48 @@ inline void Trainer::MutateAll()
 }
 
 
-
 bool operator<(NW const& a, NW const& b)
 {
-	return a.score < b.score;
+	return a.score > b.score;
 }
 void Trainer::train()
 {
-	int counter = 0;
+	GenerationCount = 0;
 	bool turn = true;
 	while (1)
 	{
 		ResetScore();
-		
+		GamesCount = 0;
+
 		ScoreAll();
 
 		sort(P.begin(), P.end());
-		BestScore = P[0].score;
-		if (P[0].score = 5)
+		for (int i = 0; i < _size; i++)
 		{
-			if (OutNW != nullptr)delete OutNW;
-			OutNW = new NW(P[0]);
-			break;
+			scores[i] = P[i].score;
+		}
+
+		if (!ForcedToTrain)
+		{
+			BestScore = P[0].score;
+			if (P[0].score == 5)
+			{
+				break;
+			}
+		}
+		else
+		{
+			if (GenerationCount > TrainLimit)break;
 		}
 
 		Replace();
 		
 		MutateAll();
 
-		counter++;
-		if (counter > TrainLimit)break;
+		GenerationCount++;
+		if (GenerationCount > TrainLimit)break;
 	}
+	ForcedToTrain = false;
 }
 
 void Trainer::SaveBest()
@@ -528,6 +551,12 @@ void Trainer::SaveAll()
 	ofstr.close();
 }
 
+void Trainer::ForceToTrain(int val)
+{
+	ForcedToTrain = true;
+	TrainLimit = val;
+}
+
 void Trainer::Load()
 {
 	if (OutNW != nullptr)delete OutNW;
@@ -543,6 +572,12 @@ void Trainer::LoadALL()
 		P[i].Load(ifstr);
 	}
 	ifstr.close();
+}
+
+void Trainer::FillOut()
+{
+	if (OutNW != nullptr)delete OutNW;
+	OutNW = new NW(P[0]);
 }
 
 

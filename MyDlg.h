@@ -4,7 +4,7 @@
 
 #pragma once
 #include"GameDlg.h"
-#include"Neuron.h"
+#include"ForcedTrainDlg.h"
 // Диалоговое окно MyDlg
 class MyDlg : public CDialogEx
 {
@@ -29,6 +29,8 @@ protected:
 	virtual BOOL OnInitDialog();
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
+	afx_msg LRESULT OnMsFillBot(WPARAM wParam, LPARAM lParam);
+
 	DECLARE_MESSAGE_MAP()
 public:
 	CComboBox CBGameMode;
@@ -46,4 +48,9 @@ public:
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	UINT_PTR timerid;
 	CStatic BSctr;
+
+	CStatic ScoresList;
+	afx_msg void OnForcedTrain();
+
+	ForcedTrainDlg ftd;
 };

@@ -31,7 +31,8 @@ void GameDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(GameDlg, CDialogEx)
 	ON_MESSAGE(MS_GAMECLICK, &GameDlg::OnMsGameClick)
 	ON_MESSAGE(MS_GAMEEND, &GameDlg::OnMsGameEnd)
-	ON_MESSAGE(MS_RESTART,&GameDlg::OnMsRestart)
+	ON_MESSAGE(MS_RESTART, &GameDlg::OnMsRestart)
+	ON_MESSAGE(MS_BOTTURN,&GameDlg::OnMsBotTurn)
 	ON_WM_KEYDOWN()
 END_MESSAGE_MAP()
 
@@ -54,12 +55,17 @@ BOOL GameDlg::OnInitDialog()
 	CRect rect;
 	GetClientRect(&rect);
 	drw.SetWindowPos(this, 0, 0, rect.Width(), rect.Height(), SWP_NOZORDER);
+
+	if (gm == nvp)SendMessageW(MS_BOTTURN);
+	SetWindowTextW(name);
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// Исключение: страница свойств OCX должна возвращать значение FALSE
 }
 
 afx_msg LRESULT GameDlg::OnMsGameClick(WPARAM wParam, LPARAM lParam)
 {
+	bool turn = game.GetTurn();
+	bool letbotplay = false;
 	if (!selected)
 	{
 		
@@ -76,9 +82,12 @@ afx_msg LRESULT GameDlg::OnMsGameClick(WPARAM wParam, LPARAM lParam)
 		selected = !selected;
 
 		RefreshPicture();
+		if ((gm == pvn) || (gm == nvp))
+			if ((turn != game.GetTurn()) && (!game.IsGameEnd())) letbotplay = true;
 	}
 	drw.Invalidate();
 	SendMessageW(MS_GAMEEND);
+	if (letbotplay)SendMessage(MS_BOTTURN);
 	return 0;
 }
 
@@ -94,13 +103,37 @@ LRESULT GameDlg::OnMsGameEnd(WPARAM wParam, LPARAM lParam)
 	return NULL;
 }
 
+LRESULT GameDlg::OnMsBotTurn(WPARAM wParam, LPARAM lParam)
+{
+	if (game.IsGameEnd())return 0;
+	auto pos = bot->MakePredictions(game);
+	if (game.IsGameEnd())
+	{
+		SendMessage(MS_GAMEEND);
+		return 0;
+	}
+	bool turn = game.GetTurn();
+	vector<ip>out;
+	game.Select(pos.first.first, pos.first.second, out);
+	if (!game.DoTurn(pos.second.first, pos.second.second)) abort();
+	if (turn == game.GetTurn())SendMessageW(MS_BOTTURN);
+	SendMessageW(MS_GAMEEND);
+
+	RefreshPicture();
+	return 0;
+}
+
 void GameDlg::RefreshPicture()
 {
 	drw.SetData(game.GetBoard());
-	auto m = game.GetMoveable();
-	if (m.empty())SendMessageW(MS_GAMEEND);
-	else
-	drw.SetSelected(m);
+	if (!game.IsGameEnd())
+	{
+		auto m = game.GetMoveable();
+		if (m.empty())SendMessageW(MS_GAMEEND);
+		else
+			drw.SetSelected(m);
+	}
+	else drw.SetSelected(vector<ip>());
 	drw.Invalidate();
 }
 
@@ -114,6 +147,7 @@ void GameDlg::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		drw.SetData(game.GetBoard());
 		drw.SetSelected(game.GetMoveable());
 		drw.Invalidate();
+		if (gm == nvp)SendMessageW(MS_BOTTURN);
 	}
 	CDialogEx::OnKeyDown(nChar, nRepCnt, nFlags);
 }
