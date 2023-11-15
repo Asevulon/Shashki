@@ -90,6 +90,12 @@
     <None Include="res\Shashki.rc2">
       <Filter>Файлы ресурсов</Filter>
     </None>
+    <None Include="all.nw">
+      <Filter>Файлы заголовков</Filter>
+    </None>
+    <None Include="best.nw">
+      <Filter>Файлы заголовков</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\Shashki.ico">

@@ -216,6 +216,8 @@
     <ResourceCompile Include="Shashki.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="all.nw" />
+    <None Include="best.nw" />
     <None Include="res\Shashki.rc2" />
   </ItemGroup>
   <ItemGroup>
