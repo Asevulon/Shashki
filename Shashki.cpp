@@ -15,7 +15,6 @@
 // CShashkiApp
 
 BEGIN_MESSAGE_MAP(CShashkiApp, CWinApp)
-	ON_COMMAND(ID_HELP, &CWinApp::OnHelp)
 END_MESSAGE_MAP()
 
 
@@ -104,4 +103,6 @@ BOOL CShashkiApp::InitInstance()
 	//  приложения вместо запуска генератора сообщений приложения.
 	return FALSE;
 }
+
+
 

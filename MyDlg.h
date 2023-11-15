@@ -4,7 +4,7 @@
 
 #pragma once
 #include"GameDlg.h"
-
+#include"Neuron.h"
 // Диалоговое окно MyDlg
 class MyDlg : public CDialogEx
 {
@@ -33,4 +33,17 @@ protected:
 public:
 	CComboBox CBGameMode;
 	afx_msg void OnBnClickedOk();
+	afx_msg void On32771();
+	afx_msg void On32773();
+	afx_msg void OnMenuLoad();
+
+	Trainer trainer;
+	afx_msg void OnSaveAll();
+	afx_msg void OnLoadAll();
+	CButton OkCtr;
+
+	HANDLE TrainingThread;
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	UINT_PTR timerid;
+	CStatic BSctr;
 };

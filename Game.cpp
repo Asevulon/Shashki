@@ -67,7 +67,7 @@ vector<int> Game::GetBoardN()
 		{
 			if (black)
 			{
-				int id = i * 4 + (j + j % 2) / 2;
+				int id = i * 4 + (j - (j % 2)) / 2;
 				res[id] = board[i][j];
 			}
 			black = !black;
@@ -81,6 +81,7 @@ int Game::GetPossibleTurns(int i, int j, vector<pair<int, int>>& out)
 	if (board[i][j] == EMPTY)return -1;
 	if (turn && ((board[i][j] == BLACK) || (board[i][j] == BLACKQ)))return -1;
 	if ((!turn) && ((board[i][j] == WHITE) || (board[i][j] == WHITEQ)))return -1;
+
 
 	if (board[i][j] == WHITE) return GetPossibleTurnsWHITE(i, j, out);
 	if (board[i][j] == WHITEQ) return GetPossibleTurnsWHITEQ(i, j, out);
@@ -550,7 +551,15 @@ vector<ip> Game::GetMoveable()
 			else notstrong.push_back(ip(i, j));
 		}
 	}
-	if (res.empty())return notstrong;
+	if (res.empty())
+	{
+		if (notstrong.empty())
+		{
+			winner = -1;
+			end = true;
+		}
+		return notstrong;
+	}
 	return res;
 }
 

@@ -27,12 +27,20 @@ void MyDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_COMBO_GAME_MODE, CBGameMode);
+	DDX_Control(pDX, IDOK, OkCtr);
+	DDX_Control(pDX, IDC_BESTSCORE, BSctr);
 }
 
 BEGIN_MESSAGE_MAP(MyDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDOK, &MyDlg::OnBnClickedOk)
+	ON_COMMAND(ID_32771, &MyDlg::On32771)
+	ON_COMMAND(ID_32773, &MyDlg::On32773)
+	ON_COMMAND(ID_MENU_LOAD, &MyDlg::OnMenuLoad)
+	ON_COMMAND(ID_32776, &MyDlg::OnSaveAll)
+	ON_COMMAND(ID_32777, &MyDlg::OnLoadAll)
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -100,4 +108,63 @@ void MyDlg::OnBnClickedOk()
 	dlg.posx = rect.Width() / 2. - 450;
 	dlg.posy = 100;
 	dlg.DoModal();
+}
+
+//сохранить
+void MyDlg::On32771()
+{
+	// TODO: добавьте свой код обработчика команд
+	trainer.SaveBest();
+}
+
+DWORD WINAPI TrainingThreadFunc(LPVOID p)
+{
+	MyDlg* dlg = (MyDlg*)p;
+	dlg->OkCtr.EnableWindow(FALSE);
+	dlg->trainer.train();
+	dlg->KillTimer(dlg->timerid);
+	dlg->OkCtr.EnableWindow(FALSE);
+	return 0;
+}
+//обучение
+void MyDlg::On32773()
+{
+	// TODO: добавьте свой код обработчика команд
+	TerminateThread(TrainingThread, 0);
+	CloseHandle(TrainingThread);
+	KillTimer(timerid);
+
+	TrainingThread = CreateThread(NULL, NULL, TrainingThreadFunc, this, NULL, NULL);
+	timerid = SetTimer(123, 250, NULL);
+}
+
+
+void MyDlg::OnMenuLoad()
+{
+	// TODO: добавьте свой код обработчика команд
+	trainer.Load();
+}
+
+
+void MyDlg::OnSaveAll()
+{
+	// TODO: добавьте свой код обработчика команд
+	trainer.SaveAll();
+}
+
+
+void MyDlg::OnLoadAll()
+{
+	// TODO: добавьте свой код обработчика команд
+	trainer.LoadALL();
+}
+
+
+void MyDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO: добавьте свой код обработчика сообщений или вызов стандартного
+	CString str;
+	str.Format(L"Лучший счет: %d", trainer.BestScore);
+	BSctr.SetWindowTextW(str);
+	CDialogEx::OnTimer(nIDEvent);
 }

@@ -27,6 +27,8 @@ public:
 // Реализация
 
 	DECLARE_MESSAGE_MAP()
+	afx_msg void OnMenuLoad();
+	afx_msg void On32773();
 };
 
 extern CShashkiApp theApp;

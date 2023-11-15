@@ -25,7 +25,7 @@ NW& NW::operator =(const NW& nw)
 NW::NW(vector<int>& LS, int Enters)
 {
 	ls = LS;
-
+	if (ls.empty())return;
 	Layer.push_back(vector<neuron>());
 	for (int i = 0; i < LS[0]; i++)
 	{
@@ -178,6 +178,10 @@ Trainer::Trainer()
 pair<ip, ip> NW::MakePredictions(Game& in)
 {
 	auto pt = in.GetMoveable();
+	if (pt.empty())
+	{
+		return pair<ip,ip>(ip(-1, -1), ip(-1, -1));
+	}
 	vector<PossibleTurn> p;
 	for (int i = 0; i < pt.size(); i++)
 	{
@@ -197,6 +201,14 @@ inline NW::PossibleTurn NW::NeuronMinmax1(Game in, ip& from, ip& to)
 {
 	if (!in.DoTurn(to.first, to.second))abort();
 	auto pt = in.GetMoveable();
+	if (pt.empty())
+	{
+		PossibleTurn res;
+		res.from = from;
+		res.to = to;
+		res.est = INT_MIN;
+		return res;
+	}
 	vector<PossibleTurn> p;
 
 	for (int i = 0; i < pt.size(); i++)
@@ -215,6 +227,14 @@ inline NW::PossibleTurn NW::NeuronMinmax2(Game in, ip& from, ip& to)
 {
 	if (!in.DoTurn(to.first, to.second))abort();
 	auto pt = in.GetMoveable();
+	if (pt.empty())
+	{
+		PossibleTurn res;
+		res.from = from;
+		res.to = to;
+		res.est = INT_MIN;
+		return res;
+	}
 	vector<PossibleTurn> p;
 
 	for (int i = 0; i < pt.size(); i++)
@@ -348,11 +368,15 @@ void Trainer::score(NW& p1, NW& p2, bool turn)
 		while (!game.IsGameEnd())
 		{
 			auto pos = p1.MakePredictions(game);
+			if (game.IsGameEnd())break;
+
 			vector<ip>out;
 			game.Select(pos.first.first, pos.first.second, out);
 			game.DoTurn(pos.second.first, pos.second.second);
 
 			pos = p2.MakePredictions(game);
+			if (game.IsGameEnd())break;
+
 			vector<ip>out2;
 			game.Select(pos.first.first, pos.first.second, out2);
 			game.DoTurn(pos.second.first, pos.second.second);
@@ -361,11 +385,15 @@ void Trainer::score(NW& p1, NW& p2, bool turn)
 		while (!game.IsGameEnd())
 		{
 			auto pos = p2.MakePredictions(game);
+			if (game.IsGameEnd())break;
+
 			vector<ip>out;
 			game.Select(pos.first.first, pos.first.second, out);
 			game.DoTurn(pos.second.first, pos.second.second);
 
 			pos = p1.MakePredictions(game);
+			if (game.IsGameEnd())break;
+
 			vector<ip>out2;
 			game.Select(pos.first.first, pos.first.second, out2);
 			game.DoTurn(pos.second.first, pos.second.second);
@@ -467,6 +495,7 @@ void Trainer::train()
 		ScoreAll();
 
 		sort(P.begin(), P.end());
+		BestScore = P[0].score;
 		if (P[0].score = 5)
 		{
 			if (OutNW != nullptr)delete OutNW;

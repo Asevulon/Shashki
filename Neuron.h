@@ -93,5 +93,7 @@ public:
 
 	void Load();
 	void LoadALL();
+
+	int BestScore = 0;
 };
 

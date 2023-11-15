@@ -97,7 +97,10 @@ LRESULT GameDlg::OnMsGameEnd(WPARAM wParam, LPARAM lParam)
 void GameDlg::RefreshPicture()
 {
 	drw.SetData(game.GetBoard());
-	drw.SetSelected(game.GetMoveable());
+	auto m = game.GetMoveable();
+	if (m.empty())SendMessageW(MS_GAMEEND);
+	else
+	drw.SetSelected(m);
 	drw.Invalidate();
 }
 
