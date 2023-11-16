@@ -51,7 +51,7 @@ BOOL GameDlg::OnInitDialog()
 	drw.SetSelected(game.GetMoveable());
 
 	SetFocus();
-	SetWindowPos(this, posx, posy, 900, 900, SWP_NOZORDER);
+	SetWindowPos(this, posx, posy, 800, 800, SWP_NOZORDER);
 	CRect rect;
 	GetClientRect(&rect);
 	drw.SetWindowPos(this, 0, 0, rect.Width(), rect.Height(), SWP_NOZORDER);

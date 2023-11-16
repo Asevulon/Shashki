@@ -138,8 +138,8 @@ void MyDlg::OnBnClickedOk()
 
 	CRect rect;
 	SystemParametersInfo(SPI_GETWORKAREA, 0, &rect, 0);
-	dlg.posx = rect.Width() / 2. - 450;
-	dlg.posy = 100;
+	dlg.posx = rect.Width() / 2. - 400;
+	dlg.posy = 50;
 	dlg.bot = trainer.OutNW;
 	
 
@@ -202,7 +202,7 @@ void MyDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: добавьте свой код обработчика сообщений или вызов стандартного
 	CString str, str2;
-	str.Format(L"Лучший счет: %d\r\nИгр сыграно: %d\r\nПоколение: %d", trainer.BestScore, trainer.GamesCount, trainer.GenerationCount);
+	str.Format(L"Лучший счет: %d\r\nИгр сыграно: %d\r\nПоколение: %d\r\nХоды: %d", trainer.BestScore, trainer.GamesCount, trainer.GenerationCount, trainer.hod);
 	BSctr.SetWindowTextW(str);
 
 	str.Format(L"");

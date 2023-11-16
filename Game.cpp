@@ -58,7 +58,8 @@ vector<int> Game::GetBoardN()
 {
 	vector<int>res;
 	res.resize(32, EMPTY);
-	
+	int t = 1;
+	if (!turn)t = -1;
 	bool black = false;
 	for (int i = 0; i < 8; i++)
 	{
@@ -68,7 +69,7 @@ vector<int> Game::GetBoardN()
 			if (black)
 			{
 				int id = i * 4 + (j - (j % 2)) / 2;
-				res[id] = board[i][j];
+				res[id] = t * board[i][j];
 			}
 			black = !black;
 		}
@@ -620,7 +621,7 @@ bool Game::DoTurn(int i, int j)
 		counter++;
 		if (counter > TURNS_CAP)
 		{
-			end == true;
+			end = true;
 			winner = -1;
 		}
 		return true;
@@ -671,7 +672,7 @@ bool Game::DoTurnUnchecked(int i, int j)
 		counter++;
 		if (counter > TURNS_CAP)
 		{
-			end == true;
+			end = true;
 			winner = -1;
 		}
 		return true;

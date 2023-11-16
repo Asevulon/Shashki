@@ -99,8 +99,9 @@ public:
 	void LoadALL();
 	void FillOut();
 	int BestScore = 0;
-	int GamesCount = 0;
+	unsigned int GamesCount = 0;
 	int GenerationCount = 0;
 	int scores[30];
+	int hod = 0;
 };
 

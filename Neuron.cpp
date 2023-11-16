@@ -200,7 +200,7 @@ pair<ip, ip> NW::MakePredictions(Game& in)
 
 inline NW::PossibleTurn NW::NeuronMinmax1(Game in, ip& from, ip& to)
 {
-	if (!in.DoTurn(to.first, to.second))abort();
+	if (!in.DoTurnUnchecked(to.first, to.second))abort();
 	auto pt = in.GetMoveable();
 	if (pt.empty())
 	{
@@ -229,7 +229,7 @@ inline NW::PossibleTurn NW::NeuronMinmax1(Game in, ip& from, ip& to)
 }
 inline NW::PossibleTurn NW::NeuronMinmax2(Game in, ip& from, ip& to)
 {
-	if (!in.DoTurn(to.first, to.second))abort();
+	in.DoTurnUnchecked(to.first, to.second);
 	auto pt = in.GetMoveable();
 	if (pt.empty())
 	{
@@ -259,7 +259,7 @@ inline NW::PossibleTurn NW::NeuronMinmax2(Game in, ip& from, ip& to)
 
 inline NW::PossibleTurn NW::Estimate(Game in, ip& from, ip& to)
 {
-	if (!in.DoTurn(to.first, to.second))abort();
+	in.DoTurnUnchecked(to.first, to.second);
 	PossibleTurn res;
 	res.est = Calc(in.GetBoardN());
 	res.from = from;
@@ -371,6 +371,7 @@ void NW::Load(ifstream& ifstr)
 void Trainer::score(NW& p1, NW& p2, bool turn)
 {
 	Game game;
+	hod = 0;
 	if (turn)
 		while (!game.IsGameEnd())
 		{
@@ -379,14 +380,19 @@ void Trainer::score(NW& p1, NW& p2, bool turn)
 
 			vector<ip>out;
 			game.Select(pos.first.first, pos.first.second, out);
-			if (!game.DoTurn(pos.second.first, pos.second.second)) abort();
+			if (!game.DoTurnUnchecked(pos.second.first, pos.second.second)) abort();
+			hod++;
+			if (game.IsGameEnd())break;
 
 			pos = p2.MakePredictions(game);
 			if (game.IsGameEnd())break;
 
 			vector<ip>out2;
 			game.Select(pos.first.first, pos.first.second, out2);
-			if (!game.DoTurn(pos.second.first, pos.second.second)) abort();
+			if (!game.DoTurnUnchecked(pos.second.first, pos.second.second)) abort();
+			hod++;
+			if (game.IsGameEnd())break;
+
 		}
 	else
 		while (!game.IsGameEnd())
@@ -396,17 +402,22 @@ void Trainer::score(NW& p1, NW& p2, bool turn)
 
 			vector<ip>out;
 			game.Select(pos.first.first, pos.first.second, out);
-			if(!game.DoTurn(pos.second.first, pos.second.second)) abort();
+			if(!game.DoTurnUnchecked(pos.second.first, pos.second.second)) abort();
+			hod++;
+			if (game.IsGameEnd())break;
 
 			pos = p1.MakePredictions(game);
 			if (game.IsGameEnd())break;
 
 			vector<ip>out2;
 			game.Select(pos.first.first, pos.first.second, out2);
-			if (!game.DoTurn(pos.second.first, pos.second.second)) abort();
+			if (!game.DoTurnUnchecked(pos.second.first, pos.second.second)) abort();
+			hod++;
+			if (game.IsGameEnd())break;
+
 		}
 
-	GamesCount++;
+	InterlockedIncrement(&GamesCount);
 	int winner = game.Winner();
 	if ((winner == 1) && turn)
 	{
@@ -430,11 +441,6 @@ void Trainer::score(NW& p1, NW& p2, bool turn)
 		return;
 	}
 
-	if ((winner == 1) && turn)
-	{
-		p1.score += WIN;
-		return;
-	}
 	if (winner == -1)
 	{
 		p1.score += DRAW;
@@ -449,10 +455,44 @@ inline void Trainer::ResetScore()
 		P[i].score = 0;
 	}
 }
-
+#include<thread>
 inline void Trainer::ScoreAll()
 {
-	for (int i = 0; i < _size; i++)
+	thread thr(
+		[this]()
+		{
+			for (int i = 0; i < _size / 3; i++)
+			{
+				bool turn = (int)rand(0.5, 1.5);
+
+				for (int j = 0; j < _games; j++)
+				{
+					int id = rand(0, _size - 1e-6);
+					while (id == i)id = rand(0, _size - 1e-6);
+					score(P[i], P[id], turn);
+				}
+				turn = !turn;
+			}
+		}
+	);
+	thread thr1(
+		[this]()
+		{
+			for (int i = _size/ 3; i < 2 *_size / 3; i++)
+			{
+				bool turn = (int)rand(0.5, 1.5);
+
+				for (int j = 0; j < _games; j++)
+				{
+					int id = rand(0, _size - 1e-6);
+					while (id == i)id = rand(0, _size - 1e-6);
+					score(P[i], P[id], turn);
+				}
+				turn = !turn;
+			}
+		}
+	);
+	for (int i = 2 * _size / 3; i < _size; i++)
 	{
 		bool turn = (int)rand(0.5, 1.5);
 
@@ -464,6 +504,8 @@ inline void Trainer::ScoreAll()
 		}
 		turn = !turn;
 	}
+	thr.join();
+	thr1.join();
 }
 
 inline void Trainer::Replace()
@@ -512,9 +554,10 @@ void Trainer::train()
 			scores[i] = P[i].score;
 		}
 
+		BestScore = P[0].score;
+
 		if (!ForcedToTrain)
 		{
-			BestScore = P[0].score;
 			if (P[0].score == 5)
 			{
 				break;
