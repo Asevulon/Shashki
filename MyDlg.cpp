@@ -105,11 +105,44 @@ HCURSOR MyDlg::OnQueryDragIcon()
 LRESULT MyDlg::OnMsFillBot(WPARAM wParam, LPARAM lParam)
 {
 	trainer.FillOut();
+
 	return LRESULT();
 }
 
 
+void MyDlg::FillInfo()
+{
+	int curtime = (clock() - trainer.StartTime) / 1000;
+	int h = curtime / 3600;
+	int m = (curtime % 3600) / 60;
+	int s = curtime % 60;
+	CString str, str2;
+	str.Format(L"Лучший счет: %d\r\nИгр сыграно: %d\r\nПоколение: %d\r\nХоды: %d\r\n Время: %d : %d : %d",
+		trainer.BestScore, trainer.GamesCount, trainer.GenerationCount, trainer.hod, h, m, s);
+	BSctr.SetWindowTextW(str);
 
+	str.Format(L"");
+	for (int i = 0; i < 10; i++)
+	{
+		str2.Format(L"%d, ", trainer.scores[i]);
+		str += str2;
+	}
+	str += L"\r\n";
+	for (int i = 10; i < 20; i++)
+	{
+		str2.Format(L"%d, ", trainer.scores[i]);
+		str += str2;
+	}
+	str += L"\r\n";
+	for (int i = 20; i < 29; i++)
+	{
+		str2.Format(L"%d, ", trainer.scores[i]);
+		str += str2;
+	}
+	str2.Format(L"%d ", trainer.scores[29]);
+	str += str2;
+	ScoresList.SetWindowTextW(str);
+}
 void MyDlg::OnBnClickedOk()
 {
 	// TODO: добавьте свой код обработчика уведомлений
@@ -162,6 +195,7 @@ DWORD WINAPI TrainingThreadFunc(LPVOID p)
 	dlg->KillTimer(dlg->timerid);
 	dlg->OkCtr.EnableWindow(TRUE);
 	dlg->SendMessage(MS_FILLBOT);
+	dlg->FillInfo();
 	return 0;
 }
 //обучение
@@ -201,31 +235,7 @@ void MyDlg::OnLoadAll()
 void MyDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: добавьте свой код обработчика сообщений или вызов стандартного
-	CString str, str2;
-	str.Format(L"Лучший счет: %d\r\nИгр сыграно: %d\r\nПоколение: %d\r\nХоды: %d", trainer.BestScore, trainer.GamesCount, trainer.GenerationCount, trainer.hod);
-	BSctr.SetWindowTextW(str);
-
-	str.Format(L"");
-	for (int i = 0; i < 10; i++)
-	{
-		str2.Format(L"%d, ", trainer.scores[i]);
-		str += str2;
-	}
-	str += L"\r\n";
-	for (int i = 10; i < 20; i++)
-	{
-		str2.Format(L"%d, ", trainer.scores[i]);
-		str += str2;
-	}
-	str += L"\r\n";
-	for (int i = 20; i < 29; i++)
-	{
-		str2.Format(L"%d, ", trainer.scores[i]);
-		str += str2;
-	}
-	str2.Format(L"%d ", trainer.scores[29]);
-	str += str2;
-	ScoresList.SetWindowTextW(str);
+	FillInfo();
 	CDialogEx::OnTimer(nIDEvent);
 }
 

@@ -7,7 +7,7 @@
 #define BLACKQ	-2
 #define EMPTY	0
 
-#define TURNS_CAP 100
+#define TURNS_CAP 150
 
 //для Trainer
 #define WIN		1

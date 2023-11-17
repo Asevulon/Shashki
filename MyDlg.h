@@ -53,4 +53,5 @@ public:
 	afx_msg void OnForcedTrain();
 
 	ForcedTrainDlg ftd;
+	void MyDlg::FillInfo();
 };

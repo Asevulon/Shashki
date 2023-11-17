@@ -54,13 +54,24 @@ bool Game::GetTurn()
 	return turn;
 }
 
-vector<int> Game::GetBoardN()
+vector<int> Game::GetBoardN(bool bInversed)
 {
 	vector<int>res;
 	res.resize(32, EMPTY);
 	int t = 1;
-	if (!turn)t = -1;
 	bool black = false;
+	if (bInversed)
+	{
+		for (int i = 0; i < 4; i++)
+		{
+			for (int j = 0; j < 8; j++)
+			{
+				int val = board[i][j];
+				board[i][j] = board[7 - i][7 - j];
+				board[7 - i][7 - j] = val;
+			}
+		}
+	}
 	for (int i = 0; i < 8; i++)
 	{
 		black = !black;
@@ -69,10 +80,23 @@ vector<int> Game::GetBoardN()
 			if (black)
 			{
 				int id = i * 4 + (j - (j % 2)) / 2;
-				res[id] = t * board[i][j];
+				res[id] = board[i][j];
 			}
 			black = !black;
 		}
+	}
+	if (bInversed)
+	{
+		for (int i = 0; i < 4; i++)
+		{
+			for (int j = 0; j < 8; j++)
+			{
+				int val = board[i][j];
+				board[i][j] = board[7 - i][7 - j];
+				board[7 - i][7 - j] = val;
+			}
+		}
+		for (int i = 0; i < 32; i++)res[i] = -res[i];
 	}
 	return res;
 }

@@ -48,9 +48,12 @@ public:
 	inline void NW::MakeChild(NW& left, NW& right);
 	inline void NW::Mutate();
 	inline pair<ip, ip> MakePredictions(Game& in);
-	inline PossibleTurn NeuronMinmax1(Game in, ip& from, ip& to);
-	inline PossibleTurn NeuronMinmax2(Game in, ip& from, ip& to);
-	inline PossibleTurn Estimate(Game in, ip& from, ip& to);
+	inline PossibleTurn NeuronMinmax1(Game in, ip& from, ip& to, bool turn);
+	inline PossibleTurn NeuronMinmax2(Game in, ip& from, ip& to, bool turn);
+	inline NW::PossibleTurn NW::NeuronMinmax3(Game in, ip& from, ip& to, bool turn);
+	inline NW::PossibleTurn NW::NeuronMinmax4(Game in, ip& from, ip& to, bool turn);
+
+	inline PossibleTurn Estimate(Game in, ip& from, ip& to, bool turn);
 	int score = 0;
 	bool turn = true;
 
@@ -103,5 +106,7 @@ public:
 	int GenerationCount = 0;
 	int scores[30];
 	int hod = 0;
+	int StartTime = 0;
+	int EndTime = 0;
 };
 

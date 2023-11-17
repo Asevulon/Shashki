@@ -47,7 +47,12 @@ BOOL GameDlg::OnInitDialog()
 	// TODO:  Добавить дополнительную инициализацию
 	game.Restart();
 	drw.parent = this;
-	drw.SetData(game.GetBoard());
+	auto board = game.GetBoard();
+	
+	
+
+
+	drw.SetData(board);
 	drw.SetSelected(game.GetMoveable());
 
 	SetFocus();

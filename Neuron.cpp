@@ -190,7 +190,7 @@ pair<ip, ip> NW::MakePredictions(Game& in)
 		in.Select(pt[i].first, pt[i].second, outs);
 		for (int j = 0; j < outs.size(); j++)
 		{
-			p.push_back(NeuronMinmax1(in, pt[i], outs[j]));
+			p.push_back(NeuronMinmax1(in, pt[i], outs[j], in.GetTurn()));
 		}
 	}
 
@@ -198,17 +198,13 @@ pair<ip, ip> NW::MakePredictions(Game& in)
 	return pair<ip, ip>(res.from, res.to);
 }
 
-inline NW::PossibleTurn NW::NeuronMinmax1(Game in, ip& from, ip& to)
+inline NW::PossibleTurn NW::NeuronMinmax1(Game in, ip& from, ip& to, bool turn)
 {
-	if (!in.DoTurnUnchecked(to.first, to.second))abort();
+	if (!in.DoTurnUnchecked(to.first, to.second))return Estimate(in, from, to, turn);
 	auto pt = in.GetMoveable();
 	if (pt.empty())
 	{
-		PossibleTurn res;
-		res.from = from;
-		res.to = to;
-		res.est = INT_MIN;
-		return res;
+		return Estimate(in, from, to, turn);
 	}
 	vector<PossibleTurn> p;
 
@@ -218,7 +214,7 @@ inline NW::PossibleTurn NW::NeuronMinmax1(Game in, ip& from, ip& to)
 		in.Select(pt[i].first, pt[i].second, outs);
 		for (int j = 0; j < outs.size(); j++)
 		{
-			p.push_back(NeuronMinmax2(in, pt[i], outs[j]));
+			p.push_back(NeuronMinmax2(in, pt[i], outs[j], turn));
 		}
 	}
 
@@ -227,17 +223,13 @@ inline NW::PossibleTurn NW::NeuronMinmax1(Game in, ip& from, ip& to)
 	m.to = to;
 	return m;
 }
-inline NW::PossibleTurn NW::NeuronMinmax2(Game in, ip& from, ip& to)
+inline NW::PossibleTurn NW::NeuronMinmax2(Game in, ip& from, ip& to, bool turn)
 {
-	in.DoTurnUnchecked(to.first, to.second);
+	if (!in.DoTurnUnchecked(to.first, to.second))return Estimate(in, from, to, turn);
 	auto pt = in.GetMoveable();
 	if (pt.empty())
 	{
-		PossibleTurn res;
-		res.from = from;
-		res.to = to;
-		res.est = INT_MAX;
-		return res;
+		return Estimate(in, from, to, turn);
 	}
 	vector<PossibleTurn> p;
 
@@ -247,7 +239,7 @@ inline NW::PossibleTurn NW::NeuronMinmax2(Game in, ip& from, ip& to)
 		in.Select(pt[i].first, pt[i].second, outs);
 		for (int j = 0; j < outs.size(); j++)
 		{
-			p.push_back(Estimate(in, pt[i], outs[j]));
+			p.push_back(NeuronMinmax3(in, pt[i], outs[j], turn));
 		}
 	}
 
@@ -256,12 +248,61 @@ inline NW::PossibleTurn NW::NeuronMinmax2(Game in, ip& from, ip& to)
 	m.to = to;
 	return m;
 }
+inline NW::PossibleTurn NW::NeuronMinmax3(Game in, ip& from, ip& to, bool turn)
+{
+	if (!in.DoTurnUnchecked(to.first, to.second))return Estimate(in, from, to, turn);
+	auto pt = in.GetMoveable();
+	if (pt.empty())
+	{
+		return Estimate(in, from, to, turn);
+	}
+	vector<PossibleTurn> p;
 
-inline NW::PossibleTurn NW::Estimate(Game in, ip& from, ip& to)
+	for (int i = 0; i < pt.size(); i++)
+	{
+		vector<ip>outs;
+		in.Select(pt[i].first, pt[i].second, outs);
+		for (int j = 0; j < outs.size(); j++)
+		{
+			p.push_back(NeuronMinmax4(in, pt[i], outs[j], turn));
+		}
+	}
+
+	auto m = Min(p);
+	m.from = from;
+	m.to = to;
+	return m;
+}
+inline NW::PossibleTurn NW::NeuronMinmax4(Game in, ip& from, ip& to, bool turn)
+{
+	if (!in.DoTurnUnchecked(to.first, to.second))return Estimate(in, from, to, turn);
+	auto pt = in.GetMoveable();
+	if (pt.empty())
+	{
+		return Estimate(in, from, to, turn);
+	}
+	vector<PossibleTurn> p;
+
+	for (int i = 0; i < pt.size(); i++)
+	{
+		vector<ip>outs;
+		in.Select(pt[i].first, pt[i].second, outs);
+		for (int j = 0; j < outs.size(); j++)
+		{
+			p.push_back(Estimate(in, pt[i], outs[j], turn));
+		}
+	}
+
+	auto m = Max(p);
+	m.from = from;
+	m.to = to;
+	return m;
+}
+inline NW::PossibleTurn NW::Estimate(Game in, ip& from, ip& to, bool turn)
 {
 	in.DoTurnUnchecked(to.first, to.second);
 	PossibleTurn res;
-	res.est = Calc(in.GetBoardN());
+	res.est = Calc(in.GetBoardN(!turn));
 	res.from = from;
 	res.to = to;
 	return res;
@@ -461,6 +502,7 @@ inline void Trainer::ScoreAll()
 	thread thr(
 		[this]()
 		{
+			srand(GetCurrentThreadId() ^ time(NULL));
 			for (int i = 0; i < _size / 3; i++)
 			{
 				bool turn = (int)rand(0.5, 1.5);
@@ -478,6 +520,8 @@ inline void Trainer::ScoreAll()
 	thread thr1(
 		[this]()
 		{
+			srand(GetCurrentThreadId() ^ time(NULL));
+
 			for (int i = _size/ 3; i < 2 *_size / 3; i++)
 			{
 				bool turn = (int)rand(0.5, 1.5);
@@ -512,14 +556,17 @@ inline void Trainer::Replace()
 {
 	for (int i = _size / 2; i < _size; i++)
 	{
-		double ver = rand(0, 1);
+		/*double ver = rand(0, 1);
 		if (ver < KillVer)P[i] = NW(LS, 32);
 		else
 		{
 			int id1 = rand(0, _size / 2 - 1e-6);
 			int id2 = rand(0, _size / 2 - 1e-6);
 			P[i].MakeChild(P[id1], P[id2]);
-		}
+		}*/
+		int id1 = rand(0, _size / 2 - 1e-6);
+		int id2 = rand(0, _size / 2 - 1e-6);
+		P[i].MakeChild(P[id1], P[id2]);
 	}
 }
 
@@ -540,6 +587,7 @@ bool operator<(NW const& a, NW const& b)
 void Trainer::train()
 {
 	GenerationCount = 0;
+	StartTime =  clock();
 	bool turn = true;
 	while (1)
 	{
@@ -576,6 +624,7 @@ void Trainer::train()
 		if (GenerationCount > TrainLimit)break;
 	}
 	ForcedToTrain = false;
+	EndTime = clock();
 }
 
 void Trainer::SaveBest()

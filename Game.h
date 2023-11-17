@@ -37,7 +37,7 @@ public:
 	inline void Restart();
 	vector<vector<int>>GetBoard();
 	bool GetTurn();
-	vector<int>GetBoardN();
+	vector<int>GetBoardN(bool bInversed);
 	vector<ip>GetMoveable();
 
 	//выбор клетки, возвращает true, если клетка выбрана успешно
